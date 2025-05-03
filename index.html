@@ -52,7 +52,7 @@
       list-style: none;
       padding: 0;
     }
-    #shareBtn, .sns-share {
+    #shareBtn, .sns-share, #startBtn {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 1em;
@@ -70,7 +70,7 @@
       font-size: 1.5em;
       text-decoration: none;
     }
-    #nickname {
+    #nickname, #modeSelect {
       margin-top: 20px;
       padding: 10px;
       font-size: 1em;
@@ -81,19 +81,24 @@
 </head>
 <body>
   <h1 id="title"></h1>
+  <div>
+    <select id="modeSelect">
+      <option value="infinite">무한모드</option>
+      <option value="timed">타임어택 60초</option>
+    </select>
+    <button id="startBtn" onclick="startGame()">게임 시작</button>
+  </div>
   <div id="timer"></div>
-  <button id="clickBtn" onclick="handleClick(event)"></button>
+  <button id="clickBtn" onclick="handleClick(event)" disabled></button>
   <div class="stats"><span id="yourClicks"></span>: <span id="count">0</span></div>
   <div class="stats"><span id="bestScore"></span>: <span id="highScore">0</span></div>
   <div><input id="nickname" type="text" placeholder="Enter your nickname" /></div>
   <div class="message" id="message"></div>
   <button id="shareBtn" onclick="shareScore()">📤 점수 공유하기</button>
-
   <div class="sns-icons">
     <a href="#" onclick="shareToTwitter()" title="Share on Twitter">🐦</a>
     <a href="#" onclick="shareToFacebook()" title="Share on Facebook">📘</a>
   </div>
-
   <h2>🌎 Leaderboard</h2>
   <ul id="leaderboard"></ul>
 
@@ -118,14 +123,16 @@
 
     let count = 0;
     let highScore = localStorage.getItem("clickKingHighScore") || 0;
-    let timer = 10;
+    let timer = 0;
     let countdown;
+    let mode = "timed";
 
     const countSpan = document.getElementById("count");
     const highScoreSpan = document.getElementById("highScore");
     const messageDiv = document.getElementById("message");
     const button = document.getElementById("clickBtn");
     const leaderboardList = document.getElementById("leaderboard");
+    const modeSelect = document.getElementById("modeSelect");
 
     const messages = [
       "Keep going!", "Is this your full power?", "Don't stop now!", "You're almost a king!"
@@ -166,49 +173,27 @@
 
     function startGame() {
       count = 0;
-      timer = 10;
-      button.disabled = false;
       countSpan.textContent = count;
-      updateTimerDisplay(timer);
-      countdown = setInterval(() => {
-        timer--;
+      button.disabled = false;
+      mode = modeSelect.value;
+      if (mode === "timed") {
+        timer = 60;
         updateTimerDisplay(timer);
-        if (timer <= 0) {
-          clearInterval(countdown);
-          button.disabled = true;
-        }
-      }, 1000);
-    }
-
-    function shareScore() {
-      const nickname = document.getElementById("nickname").value || "Anonymous";
-      const text = `${nickname} - ${t.title} - ${t.yourClicks}: ${count}\nTry it yourself!`;
-      const url = window.location.href;
-      if (navigator.share) {
-        navigator.share({ title: t.title, text, url })
-          .then(() => console.log("Shared successfully!"))
-          .catch((err) => console.log("Share failed:", err));
+        countdown = setInterval(() => {
+          timer--;
+          updateTimerDisplay(timer);
+          if (timer <= 0) {
+            clearInterval(countdown);
+            button.disabled = true;
+          }
+        }, 1000);
       } else {
-        navigator.clipboard.writeText(`${text}\n${url}`);
-        alert("링크가 복사되었습니다! (클립보드)");
+        document.getElementById("timer").textContent = "∞";
       }
     }
 
-    function shareToTwitter() {
-      const nickname = document.getElementById("nickname").value || "Anonymous";
-      const tweet = encodeURIComponent(`${nickname} scored ${count} in Click King! Try it:`);
-      const url = encodeURIComponent(window.location.href);
-      window.open(`https://twitter.com/intent/tweet?text=${tweet}&url=${url}`, '_blank');
-    }
-
-    function shareToFacebook() {
-      const url = encodeURIComponent(window.location.href);
-      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-    }
-
     highScoreSpan.textContent = highScore;
-    updateTimerDisplay(timer);
-    startGame();
+    updateTimerDisplay(0);
   </script>
 </body>
 </html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Click King Test</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      padding: 50px 20px;
+    }
+    h1 {
+      font-size: 2.5em;
+    }
+    button {
+      font-size: 1.5em;
+      padding: 15px 30px;
+      margin-top: 20px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      background-color: #4CAF50;
+      color: white;
+      transition: transform 0.1s ease;
+    }
+    button:active {
+      background-color: #45a049;
+      transform: scale(0.95);
+    }
+    .click-effect {
+      position: absolute;
+      color: red;
+      font-size: 20px;
+      animation: pop 0.6s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes pop {
+      0% { opacity: 1; transform: scale(1) translateY(0); }
+      100% { opacity: 0; transform: scale(1.5) translateY(-50px); }
+    }
+    .stats {
+      font-size: 1.2em;
+      margin-top: 20px;
+    }
+    .message {
+      margin-top: 20px;
+      color: #666;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    #shareBtn, .sns-share {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sns-icons {
+      margin-top: 10px;
+    }
+    .sns-icons a {
+      margin: 0 10px;
+      font-size: 1.5em;
+      text-decoration: none;
+    }
+    #nickname {
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="title"></h1>
+  <div id="timer"></div>
+  <button id="clickBtn" onclick="handleClick(event)"></button>
+  <div class="stats"><span id="yourClicks"></span>: <span id="count">0</span></div>
+  <div class="stats"><span id="bestScore"></span>: <span id="highScore">0</span></div>
+  <div><input id="nickname" type="text" placeholder="Enter your nickname" /></div>
+  <div class="message" id="message"></div>
+  <button id="shareBtn" onclick="shareScore()">📤 점수 공유하기</button>
+
+  <div class="sns-icons">
+    <a href="#" onclick="shareToTwitter()" title="Share on Twitter">🐦</a>
+    <a href="#" onclick="shareToFacebook()" title="Share on Facebook">📘</a>
+  </div>
+
+  <h2>🌎 Leaderboard</h2>
+  <ul id="leaderboard"></ul>
+
+  <script type="module">
+    const language = navigator.language.startsWith("ko") ? "ko" :
+                     navigator.language.startsWith("es") ? "es" :
+                     navigator.language.startsWith("zh") ? "zh" : "en";
+
+    const texts = {
+      en: { title: "Click King Test", click: "Click me!", yourClicks: "Your Clicks", bestScore: "Best Score", timeLeft: "Time Left", start: "Start Game", share: "Share your score!" },
+      ko: { title: "\uD074\uB9AD\uC655 \uD14C\uC2A4\uD2B8", click: "\uD074\uB9AD\uD574\uBD10!", yourClicks: "\uD074\uB9AD \uC218", bestScore: "\uCD5C\uACE0 \uAE30\uB85D", timeLeft: "\uB0A8\uC740 \uC2DC\uAC04", start: "\uAC8C\uC784 \uC2DC\uC791", share: "\uC810\uC218 \uACF5\uC720\uD558\uAE30" },
+      es: { title: "Prueba del Rey del Clic", click: "\u00a1Haz clic!", yourClicks: "Clics tuyos", bestScore: "Mejor puntuaci\u00f3n", timeLeft: "Tiempo restante", start: "Iniciar juego", share: "\u00a1Comparte tu puntuaci\u00f3n!" },
+      zh: { title: "\u70B9\u51FB\u738B\u6D4B\u8BD5", click: "\u70B9\u51FB\u6211\uFF01", yourClicks: "\u70B9\u51FB\u6B21\u6570", bestScore: "\u6700\u9AD8\u5F97\u5206", timeLeft: "\u5269\u4F59\u65F6\u95F4", start: "\u5F00\u59CB\u6E38\u620F", share: "\u5206\u4EAB\u4F60\u7684\u6210\u7EE9" },
+    };
+
+    const t = texts[language];
+    document.getElementById("title").textContent = t.title;
+    document.getElementById("clickBtn").textContent = t.click;
+    document.getElementById("yourClicks").textContent = t.yourClicks;
+    document.getElementById("bestScore").textContent = t.bestScore;
+    document.getElementById("shareBtn").textContent = `📤 ${t.share}`;
+
+    let count = 0;
+    let highScore = localStorage.getItem("clickKingHighScore") || 0;
+    let timer = 10;
+    let countdown;
+
+    const countSpan = document.getElementById("count");
+    const highScoreSpan = document.getElementById("highScore");
+    const messageDiv = document.getElementById("message");
+    const button = document.getElementById("clickBtn");
+    const leaderboardList = document.getElementById("leaderboard");
+
+    const messages = [
+      "Keep going!", "Is this your full power?", "Don't stop now!", "You're almost a king!"
+    ];
+
+    function handleClick(event) {
+      count++;
+      countSpan.textContent = count;
+      showClickEffect(event);
+      if (count > highScore) {
+        highScore = count;
+        localStorage.setItem("clickKingHighScore", highScore);
+        highScoreSpan.textContent = highScore;
+      }
+      if (count % 10 === 0) {
+        const msg = messages[Math.floor(Math.random() * messages.length)];
+        messageDiv.textContent = msg;
+      }
+    }
+
+    function showClickEffect(event) {
+      const effect = document.createElement("div");
+      effect.className = "click-effect";
+      effect.textContent = "+1";
+      document.body.appendChild(effect);
+      const x = event.clientX;
+      const y = event.clientY;
+      effect.style.left = `${x}px`;
+      effect.style.top = `${y}px`;
+      setTimeout(() => {
+        effect.remove();
+      }, 600);
+    }
+
+    function updateTimerDisplay(time) {
+      document.getElementById("timer").textContent = `${t.timeLeft}: ${time}s`;
+    }
+
+    function startGame() {
+      count = 0;
+      timer = 10;
+      button.disabled = false;
+      countSpan.textContent = count;
+      updateTimerDisplay(timer);
+      countdown = setInterval(() => {
+        timer--;
+        updateTimerDisplay(timer);
+        if (timer <= 0) {
+          clearInterval(countdown);
+          button.disabled = true;
+        }
+      }, 1000);
+    }
+
+    function shareScore() {
+      const nickname = document.getElementById("nickname").value || "Anonymous";
+      const text = `${nickname} - ${t.title} - ${t.yourClicks}: ${count}\nTry it yourself!`;
+      const url = window.location.href;
+      if (navigator.share) {
+        navigator.share({ title: t.title, text, url })
+          .then(() => console.log("Shared successfully!"))
+          .catch((err) => console.log("Share failed:", err));
+      } else {
+        navigator.clipboard.writeText(`${text}\n${url}`);
+        alert("링크가 복사되었습니다! (클립보드)");
+      }
+    }
+
+    function shareToTwitter() {
+      const nickname = document.getElementById("nickname").value || "Anonymous";
+      const tweet = encodeURIComponent(`${nickname} scored ${count} in Click King! Try it:`);
+      const url = encodeURIComponent(window.location.href);
+      window.open(`https://twitter.com/intent/tweet?text=${tweet}&url=${url}`, '_blank');
+    }
+
+    function shareToFacebook() {
+      const url = encodeURIComponent(window.location.href);
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+    }
+
+    highScoreSpan.textContent = highScore;
+    updateTimerDisplay(timer);
+    startGame();
+  </script>
+</body>
+</html>
